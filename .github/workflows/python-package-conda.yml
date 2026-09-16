@@ -1,32 +1,60 @@
-name: Build cli4bofs
+name: Build cli4bofs (Windows)
 
 on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
   workflow_dispatch:
 
 jobs:
-  build:
+  build-windows:
     runs-on: windows-latest
 
     steps:
-      - uses: actions/checkout@v4
-        with:
-          repository: The-Z-Labs/cli4bofs
+    # 1. Скачиваем исходный код репозитория
+    - name: Checkout repository
+      uses: actions/checkout@v4
 
-      - name: Setup Zig
-        uses: mlugg/setup-zig@v2
-        with:
-          version: 0.15.2
+    # 2. Настраиваем окружение Python
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+        cache: 'pip'
 
-      - name: Build
-        run: zig build -Doptimize=ReleaseSafe
+    # 3. Устанавливаем зависимости для Python (PyYAML необходим для парсинга YAML-файлов BOF)
+    - name: Install Python dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install pyyaml requests
 
-      - name: Find binary
-        shell: pwsh
-        run: |
-          Get-ChildItem -Recurse -Filter *.exe | Select-Object FullName, Length
+    # 4. Запускаем скрипт загрузки сторонних BOF-файлов
+    - name: Fetch 3rd party BOFs
+      run: |
+        python fetch-3rdparty-BOFs.py
 
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: cli4bofs
-          path: zig-out/bin/*.exe
+    # 5. Устанавливаем компилятор Zig (версия автоматически подтягивается из build.zig.zon)
+    - name: Setup Zig
+      uses: goto-bus-stop/setup-zig@v2
+      with:
+        version: 0.15.2
+
+    # 6. Проверяем корректность установки Zig
+    - name: Verify Zig installation
+      run: zig version
+
+    # 7. Собираем проект под Windows (строит исполняемые файлы .exe)
+    - name: Build project for Windows
+      run: |
+        zig build --summary all
+
+    # 8. Сохраняем скомпилированные артефакты (.exe файлы), чтобы их можно было скачать
+    - name: Upload Build Artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: cli4bofs-windows-binaries
+        path: |
+          zig-out/bin/*.exe
+          zig-out/lib/
+        if-no-files-found: warn
