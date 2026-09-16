@@ -16,14 +16,13 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v4
 
-    # 2. Настраиваем окружение Python
+    # 2. Настраиваем окружение Python (убрана строка cache: 'pip', вызывавшая ошибку)
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
         python-version: '3.11'
-        cache: 'pip'
 
-    # 3. Устанавливаем зависимости для Python (PyYAML необходим для парсинга YAML-файлов BOF)
+    # 3. Устанавливаем зависимости для работы Python-скрипта
     - name: Install Python dependencies
       run: |
         python -m pip install --upgrade pip
@@ -34,7 +33,7 @@ jobs:
       run: |
         python fetch-3rdparty-BOFs.py
 
-    # 5. Устанавливаем компилятор Zig (версия автоматически подтягивается из build.zig.zon)
+    # 5. Устанавливаем компилятор Zig
     - name: Setup Zig
       uses: goto-bus-stop/setup-zig@v2
       with:
@@ -44,17 +43,16 @@ jobs:
     - name: Verify Zig installation
       run: zig version
 
-    # 7. Собираем проект под Windows (строит исполняемые файлы .exe)
+    # 7. Собираем проект под Windows
     - name: Build project for Windows
       run: |
         zig build --summary all
 
-    # 8. Сохраняем скомпилированные артефакты (.exe файлы), чтобы их можно было скачать
+    # 8. Сохраняем скомпилированные .exe файлы в артефакты GitHub
     - name: Upload Build Artifacts
       uses: actions/upload-artifact@v4
       with:
         name: cli4bofs-windows-binaries
         path: |
           zig-out/bin/*.exe
-          zig-out/lib/
         if-no-files-found: warn
