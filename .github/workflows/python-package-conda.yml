@@ -1,0 +1,32 @@
+name: Build cli4bofs
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: The-Z-Labs/cli4bofs
+
+      - name: Setup Zig
+        uses: mlugg/setup-zig@v2
+        with:
+          version: 0.15.2
+
+      - name: Build
+        run: zig build -Doptimize=ReleaseSafe
+
+      - name: Find binary
+        shell: pwsh
+        run: |
+          Get-ChildItem -Recurse -Filter *.exe | Select-Object FullName, Length
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: cli4bofs
+          path: zig-out/bin/*.exe
