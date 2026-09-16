@@ -16,7 +16,7 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v4
 
-    # 2. Настраиваем окружение Python (убрана строка cache: 'pip', вызывавшая ошибку)
+    # 2. Настраиваем окружение Python
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
@@ -28,10 +28,17 @@ jobs:
         python -m pip install --upgrade pip
         pip install pyyaml requests
 
-    # 4. Запускаем скрипт загрузки сторонних BOF-файлов
+    # 4. Запускаем скрипт загрузки для каждого YAML файла в корне репозитория
     - name: Fetch 3rd party BOFs
       run: |
-        python fetch-3rdparty-BOFs.py
+        # Создаем папку для исходников BOF, если скрипт сам её не создает
+        if (!(Test-Path src)) { New-Item -ItemType Directory -Path src }
+        
+        # Перебираем все файлы BOF-*.yaml и скачиваем зависимости в папку src
+        Get-ChildItem BOF-*.yaml | ForEach-Object {
+          Write-Host "Processing $($_.Name)..."
+          python fetch-3rdparty-BOFs.py $_.Name src
+        }
 
     # 5. Устанавливаем компилятор Zig
     - name: Setup Zig
